@@ -221,10 +221,17 @@ public class HHSTestStationFrame extends javax.swing.JFrame {
             String[] columns = {"CLIENT_NUMBER", "GENDER", "AGE", "HEIGHT", "WEIGHT", "WAIST", "CHOLESTOROL", "BLOOD_PRESSURE_SYSTOLIC", "BLOOD_PRESSURE_DIASTOLIC", "GLUCOSE", "SMOKER", "EXPECTED_OUTPUT"};
             String[][] data = new String[greens][12];
             List<String> usedClientNumbers = new ArrayList<String>();
-            ResultSet rs = as400.executeQuery("SELECT ");
+            ResultSet rs = as400.executeQuery("SELECT DISTINCT CRPOLA, CRPOLN, CRCNBR, CRRTYP, CCIDNR, CCDTOB, CCSEXC, TRIM(CCTITL) || ' ' || TRIM(CCFNAM) || ' ' || TRIM(CCSNAM), CONMLPCSTA \n"
+                    + "FROM BBLIB.CMSROLEPF A                                                                 \n"
+                    + "LEFT JOIN LPCPCONMLA D ON D.CONMLPNOAL = A.CRPOLA AND D.CONMLPNUMB = A.CRPOLN                        \n"
+                    + "LEFT JOIN BBLIB.CMSCLNTPF B ON B.CCCNBR = A.CRCNBR\n"
+                    + "WHERE crpola in ('MM','MB')\n"
+                    + "AND CRRTYP IN ('POLHOLD','PARTNER')\n"
+                    + "AND CONMLPCSTA = '10INFPPAY' -- Filter on active contracts\n"
+                    + "AND CCIDNR IS NOT NULL");
 
             for (int i = 0; i < greens; i++) {
-                
+                rs.getString("");
             }
             test.insertInto("dbo.CLIENT_MEASUREMENTS", columns, data, greens);
         } catch (SQLException ex) {
