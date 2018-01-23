@@ -6,7 +6,15 @@
 package com.momentum.multiply.hhs.main;
 
 import com.momentum.multiply.SQL.DBAccess;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.sql.*;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -208,37 +216,92 @@ public class HHSTestStationFrame extends javax.swing.JFrame {
         return temp;
     }
 
-    private void generate() {
+    private void generate(){
         try {
             txtNumAmber.setEditable(false);
             txtNumGreen.setEditable(false);
             txtNumRed.setEditable(false);
+            File file = new File("lastidnumber.txt");
+            if(file.createNewFile()){
+                new PrintWriter(file).print("0");
+            }
+            Scanner line = new Scanner(file);
 
+            int lastnum = line.nextInt();
+            line.close();
             int greens = Integer.parseInt(txtNumGreen.getText());
             int ambers = Integer.parseInt(txtNumAmber.getText());
             int reds = Integer.parseInt(txtNumRed.getText());
+            int total = greens + reds + ambers;
 
             String[] columns = {"CLIENT_NUMBER", "GENDER", "AGE", "HEIGHT", "WEIGHT", "WAIST", "CHOLESTOROL", "BLOOD_PRESSURE_SYSTOLIC", "BLOOD_PRESSURE_DIASTOLIC", "GLUCOSE", "SMOKER", "EXPECTED_OUTPUT"};
             String[][] data = new String[greens][12];
             List<String> usedClientNumbers = new ArrayList<String>();
-            ResultSet rs = as400.executeQuery("SELECT DISTINCT CRPOLA, CRPOLN, CRCNBR, CRRTYP, CCIDNR, CCDTOB, CCSEXC, TRIM(CCTITL) || ' ' || TRIM(CCFNAM) || ' ' || TRIM(CCSNAM), CONMLPCSTA \n"
+            ResultSet rs = as400.executeQuery("SELECT DISTINCT CRPOLA, CRPOLN, CRCNBR, CRRTYP, CCIDNR, CCDTOB, CCSEXC, CCFNAM, CCSNAM, CONMLPCSTA \n"
                     + "FROM BBLIB.CMSROLEPF A                                                                 \n"
                     + "LEFT JOIN LPCPCONMLA D ON D.CONMLPNOAL = A.CRPOLA AND D.CONMLPNUMB = A.CRPOLN                        \n"
                     + "LEFT JOIN BBLIB.CMSCLNTPF B ON B.CCCNBR = A.CRCNBR\n"
                     + "WHERE crpola in ('MM','MB')\n"
                     + "AND CRRTYP IN ('POLHOLD','PARTNER')\n"
                     + "AND CONMLPCSTA = '10INFPPAY' -- Filter on active contracts\n"
-                    + "AND CCIDNR IS NOT NULL");
+                    + "AND CCIDNR IS NOT NULL\n"
+                    + "AND CCIDNR > " + line + "\n"
+                    + "ORDER BY CCFNAM\n"
+                    + "LIMIT " + total);
 
-            for (int i = 0; i < greens; i++) {
-                rs.getString("");
-            }
+            
+            double[] bodyfat = new CalculateBodyFat(reds, greens, ambers,generateAges(rs, total)).calculate();
+            
             test.insertInto("dbo.CLIENT_MEASUREMENTS", columns, data, greens);
         } catch (SQLException ex) {
             Logger.getLogger(HHSTestStationFrame.class.getName()).log(Level.SEVERE, null, ex);
         } catch (ClassNotFoundException ex) {
             Logger.getLogger(HHSTestStationFrame.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(HHSTestStationFrame.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+
+    private int[] generateAges(ResultSet rs, int size) {
+        String[] array = new String[size];
+        try {
+            for (int i = 0; i < size; i++) {
+                array[i] = "19" + rs.getString("CCIDNR").substring(0, 2) + "/" + rs.getString("CCIDNR").substring(2, 4) + "/" + rs.getString("CCIDNR").substring(4, 6);
+                rs.next();
+            }
+        } catch (Exception e) {
+            System.out.println("Yo. Exception.");
+        }
+
+        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
+
+        int[] arrays = new int[size];
+        
+        for (int i = 0; i < size; i++) {
+            arrays[i] = getDiffYears(new java.util.Date(array[i]), new java.util.Date());
+        }
+        return arrays;
+    }
+
+    public int getDiffYears(java.util.Date first, java.util.Date last) {
+        Calendar a = getCalendar(first);
+        Calendar b = getCalendar(last);
+        int diff = b.get(Calendar.YEAR) - a.get(Calendar.YEAR);
+        if (a.get(Calendar.MONTH) > b.get(Calendar.MONTH)
+                || (a.get(Calendar.MONTH) == b.get(Calendar.MONTH) && a.get(Calendar.DATE) > b.get(Calendar.DATE))) {
+            diff--;
+        }
+        return diff;
+    }
+
+    public Calendar getCalendar(java.util.Date date) {
+        Calendar cal = Calendar.getInstance(Locale.US);
+        cal.setTime(date);
+        return cal;
+    }
+
+    private String[] generateGenders(ResultSet rs, int size) {
+
     }
 
     private void checkTxtFields() {
