@@ -6,6 +6,7 @@
 package com.momentum.multiply.hhs.main;
 
 import com.momentum.multiply.SQL.DBAccess;
+import com.momentum.multiply.misc.*;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -250,7 +251,7 @@ public class HHSTestStationFrame extends javax.swing.JFrame {
                     + "LIMIT " + total);
 
             
-            double[] bodyfat = new CalculateBodyFat(reds, greens, ambers,generateAges(rs, total)).calculate();
+            double[] bodyfat = new CalculateScores(reds, greens, ambers,generateAges(rs, total), generateGenders(rs, total)).calculate();
             
             test.insertInto("dbo.CLIENT_MEASUREMENTS", columns, data, greens);
         } catch (SQLException ex) {
@@ -282,6 +283,25 @@ public class HHSTestStationFrame extends javax.swing.JFrame {
         }
         return arrays;
     }
+    
+    private int[] generateGenders(ResultSet rs, int size){
+        String[] array = new String[size];
+        try {
+            for (int i = 0; i < size; i++) {
+                array[i] = rs.getString("CCIDNR").substring(6, 10);
+                rs.next();
+            }
+        } catch (Exception e) {
+            System.out.println("Yo. Exception.");
+        }
+
+        int[] arrays = new int[size];
+        
+        for (int i = 0; i < size; i++) {
+            arrays[i] = (Integer.parseInt(array[i]) < 5000 ? 2 : 1);
+        }
+        return arrays;
+    }
 
     public int getDiffYears(java.util.Date first, java.util.Date last) {
         Calendar a = getCalendar(first);
@@ -298,10 +318,6 @@ public class HHSTestStationFrame extends javax.swing.JFrame {
         Calendar cal = Calendar.getInstance(Locale.US);
         cal.setTime(date);
         return cal;
-    }
-
-    private String[] generateGenders(ResultSet rs, int size) {
-
     }
 
     private void checkTxtFields() {
