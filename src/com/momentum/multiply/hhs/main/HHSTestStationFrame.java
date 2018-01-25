@@ -224,11 +224,11 @@ public class HHSTestStationFrame extends javax.swing.JFrame {
             txtNumRed.setEditable(false);
             File file = new File("lastidnumber.txt");
             if(file.createNewFile()){
-                new PrintWriter(file).print("0");
+                new PrintWriter(file).print("\'\'");
             }
             Scanner line = new Scanner(file);
 
-            int lastnum = line.nextInt();
+            String lastnum = line.next();
             line.close();
             int greens = Integer.parseInt(txtNumGreen.getText());
             int ambers = Integer.parseInt(txtNumAmber.getText());
@@ -237,7 +237,6 @@ public class HHSTestStationFrame extends javax.swing.JFrame {
 
             String[] columns = {"CLIENT_NUMBER", "GENDER", "AGE", "HEIGHT", "WEIGHT", "WAIST", "CHOLESTOROL", "BLOOD_PRESSURE_SYSTOLIC", "BLOOD_PRESSURE_DIASTOLIC", "GLUCOSE", "SMOKER", "EXPECTED_OUTPUT"};
             String[][] data = new String[greens][12];
-            List<String> usedClientNumbers = new ArrayList<String>();
             ResultSet rs = as400.executeQuery("SELECT DISTINCT CRPOLA, CRPOLN, CRCNBR, CRRTYP, CCIDNR, CCDTOB, CCSEXC, CCFNAM, CCSNAM, CONMLPCSTA \n"
                     + "FROM BBLIB.CMSROLEPF A                                                                 \n"
                     + "LEFT JOIN LPCPCONMLA D ON D.CONMLPNOAL = A.CRPOLA AND D.CONMLPNUMB = A.CRPOLN                        \n"
@@ -246,12 +245,12 @@ public class HHSTestStationFrame extends javax.swing.JFrame {
                     + "AND CRRTYP IN ('POLHOLD','PARTNER')\n"
                     + "AND CONMLPCSTA = '10INFPPAY' -- Filter on active contracts\n"
                     + "AND CCIDNR IS NOT NULL\n"
-                    + "AND CCIDNR > " + line + "\n"
+                    + "AND CCFNAM > " + lastnum + "\n"
                     + "ORDER BY CCFNAM\n"
                     + "LIMIT " + total);
 
             
-            double[] bodyfat = new CalculateScores(reds, greens, ambers,generateAges(rs, total), generateGenders(rs, total)).calculate();
+            CalculateScores object = new CalculateScores(reds, greens, ambers,rs);
             
             test.insertInto("dbo.CLIENT_MEASUREMENTS", columns, data, greens);
         } catch (SQLException ex) {
@@ -261,63 +260,6 @@ public class HHSTestStationFrame extends javax.swing.JFrame {
         } catch (IOException ex) {
             Logger.getLogger(HHSTestStationFrame.class.getName()).log(Level.SEVERE, null, ex);
         }
-    }
-
-    private int[] generateAges(ResultSet rs, int size) {
-        String[] array = new String[size];
-        try {
-            for (int i = 0; i < size; i++) {
-                array[i] = "19" + rs.getString("CCIDNR").substring(0, 2) + "/" + rs.getString("CCIDNR").substring(2, 4) + "/" + rs.getString("CCIDNR").substring(4, 6);
-                rs.next();
-            }
-        } catch (Exception e) {
-            System.out.println("Yo. Exception.");
-        }
-
-        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
-
-        int[] arrays = new int[size];
-        
-        for (int i = 0; i < size; i++) {
-            arrays[i] = getDiffYears(new java.util.Date(array[i]), new java.util.Date());
-        }
-        return arrays;
-    }
-    
-    private int[] generateGenders(ResultSet rs, int size){
-        String[] array = new String[size];
-        try {
-            for (int i = 0; i < size; i++) {
-                array[i] = rs.getString("CCIDNR").substring(6, 10);
-                rs.next();
-            }
-        } catch (Exception e) {
-            System.out.println("Yo. Exception.");
-        }
-
-        int[] arrays = new int[size];
-        
-        for (int i = 0; i < size; i++) {
-            arrays[i] = (Integer.parseInt(array[i]) < 5000 ? 2 : 1);
-        }
-        return arrays;
-    }
-
-    public int getDiffYears(java.util.Date first, java.util.Date last) {
-        Calendar a = getCalendar(first);
-        Calendar b = getCalendar(last);
-        int diff = b.get(Calendar.YEAR) - a.get(Calendar.YEAR);
-        if (a.get(Calendar.MONTH) > b.get(Calendar.MONTH)
-                || (a.get(Calendar.MONTH) == b.get(Calendar.MONTH) && a.get(Calendar.DATE) > b.get(Calendar.DATE))) {
-            diff--;
-        }
-        return diff;
-    }
-
-    public Calendar getCalendar(java.util.Date date) {
-        Calendar cal = Calendar.getInstance(Locale.US);
-        cal.setTime(date);
-        return cal;
     }
 
     private void checkTxtFields() {
