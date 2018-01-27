@@ -6,6 +6,7 @@
 package com.momentum.multiply.hhs.main;
 
 import com.momentum.multiply.SQL.DBAccess;
+import com.momentum.multiply.hhs.post.ClientMeasurementGeneration;
 import com.momentum.multiply.misc.*;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -217,13 +218,13 @@ public class HHSTestStationFrame extends javax.swing.JFrame {
         return temp;
     }
 
-    private void generate(){
+    private void generate() {
         try {
             txtNumAmber.setEditable(false);
             txtNumGreen.setEditable(false);
             txtNumRed.setEditable(false);
             File file = new File("lastidnumber.txt");
-            if(file.createNewFile()){
+            if (file.createNewFile()) {
                 new PrintWriter(file).print("\'\'");
             }
             Scanner line = new Scanner(file);
@@ -235,13 +236,37 @@ public class HHSTestStationFrame extends javax.swing.JFrame {
             int reds = Integer.parseInt(txtNumRed.getText());
             int total = greens + reds + ambers;
 
-            String[] columns = {"CLIENT_NUMBER", "GENDER", "AGE", "HEIGHT", "WEIGHT", "WAIST", "CHOLESTOROL", "BLOOD_PRESSURE_SYSTOLIC", "BLOOD_PRESSURE_DIASTOLIC", "GLUCOSE", "SMOKER", "EXPECTED_OUTPUT"};
-            String[][] data = new String[greens][12];
+            String[] columns = {"CLIENT_NUMBER",
+                "GENDER",
+                "AGE",
+                "HEIGHT",
+                "WEIGHT",
+                "WAIST",
+                "CHOLESTOROL",
+                "BLOOD_PRESSURE_SYSTOLIC",
+                "BLOOD_PRESSURE_DIASTOLIC",
+                "GLUCOSE",
+                "SMOKER",
+                "EXPECTED_OUTPUT"};
+            String[][] data = new String[total][12];
+            DBAccess.DATA_TYPES[] dt = {DBAccess.DATA_TYPES.VARCHAR,
+                DBAccess.DATA_TYPES.BIT,
+                DBAccess.DATA_TYPES.INT,
+                DBAccess.DATA_TYPES.INT,
+                DBAccess.DATA_TYPES.INT,
+                DBAccess.DATA_TYPES.INT,
+                DBAccess.DATA_TYPES.DECIMAL,
+                DBAccess.DATA_TYPES.INT,
+                DBAccess.DATA_TYPES.INT,
+                DBAccess.DATA_TYPES.DECIMAL,
+                DBAccess.DATA_TYPES.BIT,
+                DBAccess.DATA_TYPES.VARCHAR};
+
             ResultSet rs = as400.executeQuery("SELECT DISTINCT CRPOLA, CRPOLN, CRCNBR, CRRTYP, CCIDNR, CCDTOB, CCSEXC, CCFNAM, CCSNAM, CONMLPCSTA \n"
                     + "FROM BBLIB.CMSROLEPF A                                                                 \n"
                     + "LEFT JOIN LPCPCONMLA D ON D.CONMLPNOAL = A.CRPOLA AND D.CONMLPNUMB = A.CRPOLN                        \n"
                     + "LEFT JOIN BBLIB.CMSCLNTPF B ON B.CCCNBR = A.CRCNBR\n"
-                    + "WHERE crpola in ('MM','MB')\n"
+                    + "WHERE crpola in ('MM')\n"
                     + "AND CRRTYP IN ('POLHOLD','PARTNER')\n"
                     + "AND CONMLPCSTA = '10INFPPAY' -- Filter on active contracts\n"
                     + "AND CCIDNR IS NOT NULL\n"
@@ -249,10 +274,38 @@ public class HHSTestStationFrame extends javax.swing.JFrame {
                     + "ORDER BY CCFNAM\n"
                     + "LIMIT " + total);
 
-            
-            CalculateScores object = new CalculateScores(reds, greens, ambers,rs);
-            
-            test.insertInto("dbo.CLIENT_MEASUREMENTS", columns, data, greens);
+            CalculateScores object = new CalculateScores(reds, greens, ambers, rs);
+            object.generate();
+            for (int i = 0; i < total; i++) {
+                data[i][0] = object.getClient(i).getContractNumber();
+                data[i][1] = "" + object.getClient(i).getGender();
+                data[i][2] = "" + object.getClient(i).getAge();
+                data[i][3] = "" + object.getClient(i).getHeight();
+                data[i][4] = "" + object.getClient(i).getWeight();
+                data[i][5] = "" + object.getClient(i).getWaist();
+                data[i][6] = "" + object.getClient(i).getCholestorol();
+                data[i][7] = "" + object.getClient(i).getBps();
+                data[i][8] = "" + object.getClient(i).getBpd();
+                data[i][9] = "" + object.getClient(i).getGlucose();
+                data[i][10] = "" + object.getClient(i).getSmoker();
+                data[i][11] = "" + object.getClient(i).getColour().toString();
+            }
+
+            test.insertInto("dbo.CLIENT_MEASUREMENTS", columns, /*dt,*/ data, total);
+
+            ClientMeasurementGeneration[] cmg = new ClientMeasurementGeneration[total];
+            for (int i = 0; i < total; i++) {
+                cmg[i] = new ClientMeasurementGeneration();
+                cmg[i].setBpd(object.getClient(i).getBpd());
+                cmg[i].setBps(object.getClient(i).getBps());
+                cmg[i].setChol(object.getClient(i).getCholestorol());
+                cmg[i].setGlu_rand(object.getClient(i).getGlucose());
+                cmg[i].setHeight(object.getClient(i).getHeight());
+                cmg[i].setSmoker(object.getClient(i).getSmoker() > 0);
+                cmg[i].setWaist(object.getClient(i).getWaist());
+                cmg[i].setWeight(object.getClient(i).getWeight());
+                cmg[i].postClientJSON(object.getClient(i).getContractNumber());
+            }
         } catch (SQLException ex) {
             Logger.getLogger(HHSTestStationFrame.class.getName()).log(Level.SEVERE, null, ex);
         } catch (ClassNotFoundException ex) {

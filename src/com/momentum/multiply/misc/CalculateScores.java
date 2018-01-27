@@ -22,6 +22,7 @@ public class CalculateScores {
     private int numReds, numGreens, numAmbers, size;
     private Determinant[] clients;
     private String[] clientIDNums;
+    private String[] contractNumber;
     private DecimalFormat df;
 
     public CalculateScores(int numReds, int numGreens, int numAmbers, ResultSet rs) throws SQLException {
@@ -38,18 +39,19 @@ public class CalculateScores {
         this.clients = new Determinant[size];
         for (int i = 0; i < size; i++) {
             this.clientIDNums[i] = "" + rs.getInt("CCIDNR");
+            this.contractNumber[i] = "" + rs.getInt("CRCNBR");
             do {
                 rand = (int) (Math.random() * 3);
                 if (rand == 0 && usedGreens < numGreens) {
-                    clients[i] = new Determinant(clientIDNums[i], COLOURS.GREEN);
+                    clients[i] = new Determinant(clientIDNums[i], contractNumber[i], COLOURS.GREEN);
                     usedGreens++;
                     flag = true;
                 } else if (rand == 1 && usedAmbers < numAmbers) {
-                    clients[i] = new Determinant(clientIDNums[i], COLOURS.AMBER);
+                    clients[i] = new Determinant(clientIDNums[i], contractNumber[i], COLOURS.AMBER);
                     usedAmbers++;
                     flag = true;
                 } else if (rand == 2 && usedReds < numReds) {
-                    clients[i] = new Determinant(clientIDNums[i], COLOURS.RED);
+                    clients[i] = new Determinant(clientIDNums[i], contractNumber[i], COLOURS.RED);
                     usedReds++;
                     flag = true;
                 } else {
@@ -63,6 +65,23 @@ public class CalculateScores {
         generateAges();
         generateGenders();
         df = new DecimalFormat("#.##");
+    }
+
+    public void generate() {
+        generatePointAllocation();
+        calculateBFP();
+        calculateBloodPressure();
+        calculateCholestorol();
+        calculateGlucose();
+        calculateSmoker();
+    }
+
+    public Determinant getClient(int i) {
+        return clients[i];
+    }
+
+    public void post() {
+
     }
 
     public void generatePointAllocation() {
@@ -160,12 +179,29 @@ public class CalculateScores {
 //</editor-fold>
                 //<editor-fold defaultstate="collapsed" desc="Red Score">
                 case RED:
-                    clients[i].setPoints((int) (Math.random() * 3 + 1));
+                    clients[i].setPoints((int) (Math.random() * 11 + 4));
                     for (int j = 0; j < clients[i].getPoints();) {
                         do {
                             temp = (int) (Math.random() * 6);
-                        } while (invPts[temp] < 1);
-                        invPts[temp] = (int) (Math.random() * 3 + 1);
+                        } while (invPts[temp] == 0);
+                        switch (temp) {
+                            case 0:
+                            case 4:
+                                do {
+                                    invPts[temp] = (int) (Math.random() * 4);
+                                } while (invPts[temp] == 2);
+                                break;
+                            case 1:
+                            case 2:
+                            case 3:
+                                invPts[temp] = (int) (Math.random() * 4);
+                                break;
+                            default:
+                                do {
+                                    invPts[temp] = (int) (Math.random() * 3);
+                                } while (invPts[temp] == 1);
+                                break;
+                        }
                         j += invPts[temp];
                     }
 //</editor-fold>
@@ -550,58 +586,94 @@ public class CalculateScores {
             bpScore = clients[i].getPoints(1) + clients[i].getPoints(2);
             if (bpScore == 0) {
                 clients[i].setBps((int) (Math.random() * (129 - 91) + 91));
-                clients[i].setBps((int) (Math.random() * (89 - 61) + 61));
+                clients[i].setBpd((int) (Math.random() * (89 - 61) + 61));
             } else if (bpScore == 1) {
                 rand = (int) (Math.random() * 21265 % 3);
                 if (rand == 0) {
                     clients[i].setBps((int) (Math.random() * (90 - 0) + 0));
-                    clients[i].setBps((int) (Math.random() * (80 - 61) + 61));
+                    clients[i].setBpd((int) (Math.random() * (80 - 61) + 61));
                 } else if (rand == 1) {
                     clients[i].setBps((int) (Math.random() * (129 - 91) + 91));
-                    clients[i].setBps((int) (Math.random() * (60 - 0) + 0));
+                    clients[i].setBpd((int) (Math.random() * (60 - 0) + 0));
                 } else if (rand == 2) {
                     clients[i].setBps((int) (Math.random() * (139 - 130) + 130));
-                    clients[i].setBps((int) (Math.random() * (89 - 61) + 61));
+                    clients[i].setBpd((int) (Math.random() * (89 - 61) + 61));
                 }
             } else if (bpScore == 2) {
                 rand = (int) (Math.random() * 21265 % 5);
                 if (rand == 0) {
                     clients[i].setBps((int) (Math.random() * (90 - 0) + 0));
-                    clients[i].setBps((int) (Math.random() * (99 - 90) + 90));
-                } else if (rand == 1) {//YOU STOPPED HERE??
+                    clients[i].setBpd((int) (Math.random() * (89 - 81) + 81));
+                } else if (rand == 1) {
                     clients[i].setBps((int) (Math.random() * (129 - 91) + 91));
-                    clients[i].setBps((int) (Math.random() * (99 - 90) + 90));
+                    clients[i].setBpd((int) (Math.random() * (99 - 90) + 90));
                 } else if (rand == 2) {
                     clients[i].setBps((int) (Math.random() * (139 - 130) + 130));
-                    clients[i].setBps((int) (Math.random() * (60 - 0) + 0));
+                    clients[i].setBpd((int) (Math.random() * (60 - 0) + 0));
                 } else if (rand == 3) {
                     clients[i].setBps((int) (Math.random() * (159 - 140) + 140));
-                    clients[i].setBps((int) (Math.random() * (89 - 61) + 61));
+                    clients[i].setBpd((int) (Math.random() * (89 - 61) + 61));
                 } else if (rand == 4) {
                     clients[i].setBps((int) (Math.random() * (159 - 140) + 140));
-                    clients[i].setBps((int) (Math.random() * (89 - 61) + 61));
+                    clients[i].setBpd((int) (Math.random() * (89 - 61) + 61));
                 }
             } else if (bpScore == 3) {
-                clients[i].setBps((int) (Math.random() * (129 - 91) + 91));
-                clients[i].setBps((int) (Math.random() * (89 - 61) + 61));
+                rand = (int) (Math.random() * 21265 % 6);
+                if (rand == 0) {
+                    clients[i].setBps((int) (Math.random() * (90 - 0) + 0));
+                    clients[i].setBpd((int) (Math.random() * (99 - 90) + 90));
+                } else if (rand == 1) {
+                    clients[i].setBps((int) (Math.random() * (129 - 91) + 91));
+                    clients[i].setBpd((int) (Math.random() * (300 - 100) + 100));
+                } else if (rand == 2) {
+                    clients[i].setBps((int) (Math.random() * (139 - 130) + 130));
+                    clients[i].setBpd((int) (Math.random() * (99 - 90) + 90));
+                } else if (rand == 3) {
+                    clients[i].setBps((int) (Math.random() * (159 - 140) + 140));
+                    clients[i].setBpd((int) (Math.random() * (60 - 0) + 0));
+                } else if (rand == 4) {
+                    clients[i].setBps((int) (Math.random() * (400 - 160) + 160));
+                    clients[i].setBpd((int) (Math.random() * (89 - 61) + 61));
+                }
             } else if (bpScore == 4) {
-                clients[i].setBps((int) (Math.random() * (129 - 91) + 91));
-                clients[i].setBps((int) (Math.random() * (89 - 61) + 61));
+                rand = (int) (Math.random() * 21265 % 4);
+                if (rand == 0) {
+                    clients[i].setBps((int) (Math.random() * (90 - 0) + 0));
+                    clients[i].setBpd((int) (Math.random() * (300 - 100) + 100));
+                } else if (rand == 1) {
+                    clients[i].setBps((int) (Math.random() * (139 - 130) + 130));
+                    clients[i].setBpd((int) (Math.random() * (300 - 100) + 100));
+                } else if (rand == 2) {
+                    clients[i].setBps((int) (Math.random() * (159 - 140) + 140));
+                    clients[i].setBpd((int) (Math.random() * (99 - 90) + 90));
+                } else if (rand == 3) {
+                    clients[i].setBps((int) (Math.random() * (400 - 160) + 160));
+                    clients[i].setBpd((int) (Math.random() * (60 - 0) + 0));
+                }
             } else if (bpScore == 5) {
-                clients[i].setBps((int) (Math.random() * (129 - 91) + 91));
-                clients[i].setBps((int) (Math.random() * (89 - 61) + 61));
+                rand = (int) (Math.random() * 21265 % 2);
+                if (rand == 0) {
+                    clients[i].setBps((int) (Math.random() * (159 - 140) + 140));
+                    clients[i].setBpd((int) (Math.random() * (300 - 100) + 100));
+                } else if (rand == 1) {
+                    clients[i].setBps((int) (Math.random() * (400 - 160) + 160));
+                    clients[i].setBpd((int) (Math.random() * (99 - 90) + 90));
+                }
             } else if (bpScore == 6) {
-                clients[i].setBps((int) (Math.random() * (129 - 91) + 91));
-                clients[i].setBps((int) (Math.random() * (89 - 61) + 61));
+                clients[i].setBps((int) (Math.random() * (400 - 160) + 160));
+                clients[i].setBpd((int) (Math.random() * (300 - 100) + 100));
             }
         }
     }
 
     public void calculateSmoker() {
-        int greenScores = calculateNumbers(COLOURS.GREEN, 5);
-        int amberScores = calculateNumbers(COLOURS.AMBER, 5);
-        int redScores = calculateNumbers(COLOURS.RED, 5);
-
+        for (int i = 0; i < size; i++) {
+            if (clients[i].getSmokerCol() == COLOURS.GREEN) {
+                clients[i].setSmoker(0);
+            } else {
+                clients[i].setSmoker(2);
+            }
+        }
     }
 
     private int calculateNumbers(COLOURS col, int pos) {

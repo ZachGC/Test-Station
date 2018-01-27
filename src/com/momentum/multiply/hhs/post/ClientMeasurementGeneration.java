@@ -17,26 +17,18 @@ import okhttp3.*;
  */
 public class ClientMeasurementGeneration {
 
-    private boolean smoker, pregnant;
+    private boolean smoker;
     private int height, bps, bpd, waist;
-    private float glu_rand, chol, weight;
+    private double glu_rand, chol, weight;
     private String json = "";
 
-    //<editor-fold> 
+    //<editor-fold defaultstate="collapsed" desc="Getters & Setters"> 
     public boolean isSmoker() {
         return smoker;
     }
 
     public void setSmoker(boolean smoker) {
         this.smoker = smoker;
-    }
-
-    public boolean isPregnant() {
-        return pregnant;
-    }
-
-    public void setPregnant(boolean pregnant) {
-        this.pregnant = pregnant;
     }
 
     public int getHeight() {
@@ -71,38 +63,36 @@ public class ClientMeasurementGeneration {
         this.waist = waist;
     }
 
-    public float getGlu_rand() {
+    public double getGlu_rand() {
         return glu_rand;
     }
 
-    public void setGlu_rand(float glu_rand) {
+    public void setGlu_rand(double glu_rand) {
         this.glu_rand = glu_rand;
     }
 
-    public float getChol() {
+    public double getChol() {
         return chol;
     }
 
-    public void setChol(float chol) {
+    public void setChol(double chol) {
         this.chol = chol;
     }
 
-    public float getWeight() {
+    public double getWeight() {
         return weight;
     }
 
-    public void setWeight(float weight) {
+    public void setWeight(double weight) {
         this.weight = weight;
     }
 
-    //</editor-fold>//Accessors and Mutators
-    
+    //</editor-fold>
     public ClientMeasurementGeneration() {
     }
 
-    public ClientMeasurementGeneration(boolean smoker, boolean pregnant, boolean male, int height, int bps, int bpd, int waist, float glu_rand, float chol, float weight) {
+    public ClientMeasurementGeneration(boolean smoker, boolean male, int height, int bps, int bpd, int waist, double glu_rand, double chol, double weight) {
         this.smoker = smoker;
-        this.pregnant = pregnant;
         this.height = height;
         this.bps = bps;
         this.bpd = bpd;
@@ -114,12 +104,8 @@ public class ClientMeasurementGeneration {
 
     private String createClientJSON() {
         String smoker = "Non-";
-        String pregnant = "NO";
         if (this.smoker) {
             smoker = "";
-        }
-        if (this.pregnant) {
-            pregnant = "YES";
         }
         String json = "[  \r\n   "
                 //<editor-fold defaultstate="collapsed" desc="Blood Pressure">
@@ -172,13 +158,6 @@ public class ClientMeasurementGeneration {
                 + "\"results\":{  \r\n         \"result\":\"" + weight + "\"\r\n      }\r\n   },"
                 //</editor-fold>
 
-                //<editor-fold defaultstate="collapsed" desc="Pregnant">
-                + "\r\n   {  \r\n      \"name\":\"Pregnant\",\r\n      "
-                + "\"type\":\"Health Risk Assessment"
-                + "\",\r\n      \"date\":\"2017-11-15T00:00:00+02:00\",\r\n      "
-                + "\"results\":{  \r\n         \"result\":\"" + pregnant + "\"\r\n      }\r\n   "
-                //</editor-fold>
-
                 + "}\r\n]\r\n";
         this.json = json;
         return json;
@@ -216,7 +195,7 @@ public class ClientMeasurementGeneration {
 
     @Override
     public String toString() {
-        return "PostmanSend{" + "smoker=" + smoker + ", pregnant=" + pregnant + ", height=" + height + ", bps=" + bps + ", bpd=" + bpd + ", waist=" + waist + ", glu_rand=" + glu_rand + ", chol=" + chol + ", weight=" + weight + "}\n";
+        return "PostmanSend{" + "smoker=" + smoker + ", height=" + height + ", bps=" + bps + ", bpd=" + bpd + ", waist=" + waist + ", glu_rand=" + glu_rand + ", chol=" + chol + ", weight=" + weight + "}\n";
     }
 
 }

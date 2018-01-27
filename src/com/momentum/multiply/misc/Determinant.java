@@ -12,15 +12,16 @@ package com.momentum.multiply.misc;
 public class Determinant {
 
     //<editor-fold defaultstate="collapsed" desc="Variables">
-    private String id;
+    private String id, contractNumber;
     private COLOURS colour, bfpCol, bpsCol, bpdCol, cholCol, gluCol, smokerCol;
     private int height, weight, waist, age, gender, points, bps, bpd, smoker;
     private double cholestorol, glucose, bfp;
     private int[] pointPortfolio;
 
 //</editor-fold>
-    public Determinant(String id, COLOURS col) {
+    public Determinant(String id, String crcnbr, COLOURS col) {
         this.id = id;
+        this.contractNumber = crcnbr;
         colour = col;
         int[] temp = {0, 0, 0, 0, 0, 0};
         pointPortfolio = temp;
@@ -63,6 +64,14 @@ public class Determinant {
             default:
                 return smokerCol;
         }
+    }
+
+    public String getContractNumber() {
+        return contractNumber;
+    }
+
+    public void setContractNumber(String contractNumber) {
+        this.contractNumber = contractNumber;
     }
 
     public COLOURS getSmokerCol() {
