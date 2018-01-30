@@ -31,7 +31,7 @@ public class LoginUI extends JDialog {
         if (!db.equals("AS400") && !db.equals("CORE")) {
             JOptionPane.showMessageDialog(parent, "Warning! Incorrect database type entered.", "WARNING", JOptionPane.WARNING_MESSAGE);
             dispose();
-        } 
+        }
         JPanel panel = new JPanel(new GridBagLayout());
         GridBagConstraints cs = new GridBagConstraints();
 
@@ -90,6 +90,7 @@ public class LoginUI extends JDialog {
 
         getContentPane().add(panel, BorderLayout.CENTER);
         getContentPane().add(bp, BorderLayout.PAGE_END);
+        this.getRootPane().setDefaultButton(btnLogin);
 
         pack();
         setResizable(false);

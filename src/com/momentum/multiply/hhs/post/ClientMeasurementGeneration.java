@@ -155,10 +155,10 @@ public class ClientMeasurementGeneration {
                 + "\r\n   {  \r\n      \"name\":\"Weight\",\r\n      "
                 + "\"type\":\"Health Risk Assessment"
                 + "\",\r\n      \"date\":\"2017-11-15T00:00:00+02:00\",\r\n      "
-                + "\"results\":{  \r\n         \"result\":\"" + weight + "\"\r\n      }\r\n   },"
+                + "\"results\":{  \r\n         \"result\":\"" + weight + "\"\r\n      }\r\n   }"
                 //</editor-fold>
 
-                + "}\r\n]\r\n";
+                + "\r\n]\r\n";
         this.json = json;
         return json;
     }
@@ -181,16 +181,12 @@ public class ClientMeasurementGeneration {
                 .addHeader("Postman-Token", uuid.toString())
                 .build();
 
-        System.out.println(uuid + "    " + request.toString());
-
         try {
             Response response = client.newCall(request).execute();
-            System.out.println("Successful execution");
+            System.out.println(clientNumber);
         } catch (IOException ex) {
-            System.out.println("Something went wrong in the PostmanSend Class");
+            System.out.println("Something went wrong in the ClientMeasurementGeneration Class");
         }
-
-        System.out.println(json);
     }
 
     @Override

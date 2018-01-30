@@ -5,12 +5,14 @@
  */
 package com.momentum.multiply.misc;
 
+import com.momentum.multiply.hhs.main.HHSTestStationFrame;
 import com.momentum.multiply.misc.Determinant.COLOURS;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.text.DateFormat;
 import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.Month;
+import java.time.Period;
 import java.util.*;
 
 /**
@@ -19,50 +21,69 @@ import java.util.*;
  */
 public class CalculateScores {
 
-    private int numReds, numGreens, numAmbers, size;
+    private final int size;
     private Determinant[] clients;
     private String[] clientIDNums;
     private String[] contractNumber;
     private DecimalFormat df;
+    private HHSTestStationFrame hhs;
 
-    public CalculateScores(int numReds, int numGreens, int numAmbers, ResultSet rs) throws SQLException {
-        this.numReds = numReds;
-        this.numGreens = numGreens;
-        this.numAmbers = numAmbers;
+    public CalculateScores(HHSTestStationFrame hhs, int numReds, int numGreens, int numAmbers, ResultSet rs) throws SQLException {
         int usedGreens = 0;
         int usedAmbers = 0;
         int usedReds = 0;
+        this.hhs = hhs;
         int rand;
-        boolean flag = false;
+        boolean flag;
         size = (numReds + numAmbers + numGreens);
         this.clientIDNums = new String[size];
+        this.contractNumber = new String[size];
         this.clients = new Determinant[size];
         for (int i = 0; i < size; i++) {
-            this.clientIDNums[i] = "" + rs.getInt("CCIDNR");
-            this.contractNumber[i] = "" + rs.getInt("CRCNBR");
+            rs.next();
+            flag = false;
+            this.clientIDNums[i] = "" + rs.getString("CCIDNR");
+            this.contractNumber[i] = "" + rs.getLong("CRCNBR");
             do {
                 rand = (int) (Math.random() * 3);
-                if (rand == 0 && usedGreens < numGreens) {
-                    clients[i] = new Determinant(clientIDNums[i], contractNumber[i], COLOURS.GREEN);
-                    usedGreens++;
-                    flag = true;
-                } else if (rand == 1 && usedAmbers < numAmbers) {
-                    clients[i] = new Determinant(clientIDNums[i], contractNumber[i], COLOURS.AMBER);
-                    usedAmbers++;
-                    flag = true;
-                } else if (rand == 2 && usedReds < numReds) {
-                    clients[i] = new Determinant(clientIDNums[i], contractNumber[i], COLOURS.RED);
-                    usedReds++;
-                    flag = true;
-                } else {
-                    flag = true;
+                switch (rand) {
+                    case 0:
+                        if (usedGreens == numGreens) {
+                            rand++;
+                        } else {
+                            flag = true;
+                        }
+                        break;
+                    case 1:
+                        if (usedAmbers == numAmbers) {
+                            rand++;
+                        } else {
+                            flag = true;
+                        }
+                        break;
+                    case 2:
+                        if (usedReds == numReds) {
+                            rand -= 2;
+                        } else {
+                            flag = true;
+                        }
+                        break;
                 }
             } while (flag == false);
-            rs.next();
-
+            if (rand == 0) {
+                clients[i] = new Determinant(clientIDNums[i], contractNumber[i], COLOURS.GREEN);
+                usedGreens++;
+            } else if (rand == 1) {
+                clients[i] = new Determinant(clientIDNums[i], contractNumber[i], COLOURS.AMBER);
+                usedAmbers++;
+            } else {
+                clients[i] = new Determinant(clientIDNums[i], contractNumber[i], COLOURS.RED);
+                usedReds++;
+            }
         }
 
         generateAges();
+
         generateGenders();
         df = new DecimalFormat("#.##");
     }
@@ -80,15 +101,19 @@ public class CalculateScores {
         return clients[i];
     }
 
+    public Determinant[] getClients() {
+        return clients;
+    }
+
     public void post() {
 
     }
 
     public void generatePointAllocation() {
-        int[] invPts = {0, 0, 0, 0, 0, 0};
-        int[] tempArr = {0, 0, 0, 0, 0, 0};
+        int[] invPts;
         int points = -1, temp = 0;
-        for (int i = 0; i < clients.length; i++) {
+        for (int i = 0; i < size; i++) {
+            invPts = new int[6];
             switch (clients[i].getColour()) {
                 //<editor-fold defaultstate="collapsed" desc="Green Score">
                 case GREEN:
@@ -97,7 +122,11 @@ public class CalculateScores {
 //</editor-fold>
                 //<editor-fold defaultstate="collapsed" desc="Amber Score">
                 case AMBER:
-                    clients[i].setPoints((int) (Math.random() * 3 + 1));
+                    points = (int) (Math.random() * 3 + 1);
+                    clients[i].setPoints(points);
+                    do {
+                        temp = (int) (Math.random() * 6);
+                    } while (invPts[temp] != 0);
                     if (points == 1) {
                         do {
                             temp = (int) (Math.random() * 6);
@@ -179,11 +208,14 @@ public class CalculateScores {
 //</editor-fold>
                 //<editor-fold defaultstate="collapsed" desc="Red Score">
                 case RED:
-                    clients[i].setPoints((int) (Math.random() * 11 + 4));
+                    points = (int) (Math.random() * 11 + 4);
+                    clients[i].setPoints(points);
+                    int count = 0;
                     for (int j = 0; j < clients[i].getPoints();) {
                         do {
                             temp = (int) (Math.random() * 6);
-                        } while (invPts[temp] == 0);
+                        } while (invPts[temp] != 0 && count < (int) (points / 3));
+                        count++;
                         switch (temp) {
                             case 0:
                             case 4:
@@ -202,13 +234,17 @@ public class CalculateScores {
                                 } while (invPts[temp] == 1);
                                 break;
                         }
+                        System.out.print("");
                         j += invPts[temp];
                     }
+                    break;
 //</editor-fold>
+
             }
             clients[i].setAllColours(invPts);
+            hhs.doWork("Point Allocation", false, "" + (int) ((i + 1) * 100 / size) + "%", (int) ((i + 1) * 100 / size));
         }
-
+        System.out.println("");
     }
 
     public void calculateBFP() {
@@ -283,9 +319,9 @@ public class CalculateScores {
                             } while (bfp[i] < 22 || bfp[i] >= 25);
                         } else {
                             do {
-                                height = (int) (Math.random() * 6 + 148);
-                                weight = (int) (Math.random() * 6 + (60 + (50 - clients[i].getAge() < 61 ? clients[i].getAge() : 60)));
-                                waist = (int) (Math.random() * 15 + 25);
+                                height = (int) (Math.random() * 10 + 160);
+                                weight = (int) (Math.random() * 6 + (117 - (clients[i].getAge() < 61 ? clients[i].getAge() : 60)));
+                                waist = (int) (Math.random() * 10 + 92);
                                 bfp[i] = 10.32970
                                         + (0.155437 * clients[i].getAge())
                                         + (11.19118 * clients[i].getGender())
@@ -535,7 +571,12 @@ public class CalculateScores {
             clients[i].setHeight(height);
             clients[i].setWaist(waist);
             clients[i].setBfp(bfp[i]);
+
+            hhs.doWork("Body Fat Percentage Allocation", false, "" + (int) ((i + 1) * 100 / size) + "%", (int) ((i + 1) * 100 / size));
+            System.out.println("BFP snapback " + i);
         }
+
+        System.out.println("BFP calculated");
     }
 
     public void calculateCholestorol() {
@@ -558,6 +599,7 @@ public class CalculateScores {
             if (clients[i].getCholCol() == COLOURS.RED) {
                 clients[i].setCholestorol(Double.parseDouble(df.format(Math.random() * (40 - 7.25) + 7.25)));
             }
+            hhs.doWork("Cholestorol Allocation", false, "" + (int) ((i + 1) * 100 / size) + "%", (int) ((i + 1) * 100 / size));
         }
     }
 
@@ -577,6 +619,7 @@ public class CalculateScores {
             if (clients[i].getGluCol() == COLOURS.RED) {
                 clients[i].setGlucose(Double.parseDouble(df.format(Math.random() * (70 - 11.01) + 11.01)));
             }
+            hhs.doWork("Glucose Allocation", false, "" + (int) ((i + 1) * 100 / size) + "%", (int) ((i + 1) * 100 / size));
         }
     }
 
@@ -663,6 +706,7 @@ public class CalculateScores {
                 clients[i].setBps((int) (Math.random() * (400 - 160) + 160));
                 clients[i].setBpd((int) (Math.random() * (300 - 100) + 100));
             }
+            hhs.doWork("Blood Pressure Allocation", false, "" + (int) ((i + 1) * 100 / size) + "%", (int) ((i + 1) * 100 / size));
         }
     }
 
@@ -673,6 +717,7 @@ public class CalculateScores {
             } else {
                 clients[i].setSmoker(2);
             }
+            hhs.doWork("Smoker Allocation", false, "" + (int) ((i + 1) * 100 / size) + "%", (int) ((i + 1) * 100 / size));
         }
     }
 
@@ -688,17 +733,20 @@ public class CalculateScores {
 
     //<editor-fold defaultstate="collapsed" desc="Private Methods">
     private void generateAges() {
-        String[] array = new String[size];
+
+        LocalDate[] bday = new LocalDate[size];
+        LocalDate today = LocalDate.now();
+
         try {
             for (int i = 0; i < size; i++) {
-                array[i] = "19" + this.clientIDNums[i].substring(0, 2) + "/" + this.clientIDNums[i].substring(2, 4) + "/" + this.clientIDNums[i].substring(4, 6);
+                bday[i] = LocalDate.of(Integer.parseInt((Integer.parseInt(this.clientIDNums[i].substring(0, 2)) > 1 ? "19" : "20") + this.clientIDNums[i].substring(0, 2)), Integer.parseInt(this.clientIDNums[i].substring(2, 4)), Integer.parseInt(this.clientIDNums[i].substring(4, 6)));
             }
         } catch (Exception e) {
             System.out.println("Yo. Exception.");
         }
 
         for (int i = 0; i < size; i++) {
-            clients[i].setAge(getDiffYears(new java.util.Date(array[i]), new java.util.Date()));
+            clients[i].setAge(Period.between(bday[i], today).getYears());
         }
     }
 
@@ -715,17 +763,6 @@ public class CalculateScores {
         for (int i = 0; i < size; i++) {
             clients[i].setGender((Integer.parseInt(array[i]) < 5000 ? 2 : 1));
         }
-    }
-
-    private int getDiffYears(java.util.Date first, java.util.Date last) {
-        Calendar a = getCalendar(first);
-        Calendar b = getCalendar(last);
-        int diff = b.get(Calendar.YEAR) - a.get(Calendar.YEAR);
-        if (a.get(Calendar.MONTH) > b.get(Calendar.MONTH)
-                || (a.get(Calendar.MONTH) == b.get(Calendar.MONTH) && a.get(Calendar.DATE) > b.get(Calendar.DATE))) {
-            diff--;
-        }
-        return diff;
     }
 
     private Calendar getCalendar(java.util.Date date) {

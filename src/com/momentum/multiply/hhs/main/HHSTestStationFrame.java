@@ -8,19 +8,26 @@ package com.momentum.multiply.hhs.main;
 import com.momentum.multiply.SQL.DBAccess;
 import com.momentum.multiply.hhs.post.ClientMeasurementGeneration;
 import com.momentum.multiply.misc.*;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.*;
 import java.sql.*;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.JOptionPane;
+import javax.swing.JTable;
+import javax.swing.SwingUtilities;
 import javax.swing.event.*;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableModel;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.netbeans.lib.awtextra.AbsoluteConstraints;
 
 /**
@@ -32,6 +39,7 @@ public class HHSTestStationFrame extends javax.swing.JFrame {
     private ApplicationMainFrame amf;
     private String as400UN, as400PW, coreUN, corePW;
     private DBAccess as400 = null, core = null, test = null;
+    private int total;
 
     public String getAs400UN() {
         return as400UN;
@@ -106,7 +114,9 @@ public class HHSTestStationFrame extends javax.swing.JFrame {
         lblAmber = new javax.swing.JLabel();
         lblRed = new javax.swing.JLabel();
         lblHeader = new javax.swing.JLabel();
+        lblProgress = new javax.swing.JLabel("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
         btnGenerate = new javax.swing.JButton();
+        progressBar = new javax.swing.JProgressBar();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("HHS Test Station");
@@ -129,8 +139,10 @@ public class HHSTestStationFrame extends javax.swing.JFrame {
             }
         });
 
-        tblResults.setVisible(false);
-        getContentPane().add(tblResults, new AbsoluteConstraints(200, 300, 500, 200));
+        getContentPane().add(progressBar, new AbsoluteConstraints(200, 300, 500, 20));
+
+        lblProgress.setText("Start");
+        getContentPane().add(lblProgress, new AbsoluteConstraints(200, 250, 500, 20));
 
         scroller.setViewportView(tblResults);
 
@@ -165,7 +177,11 @@ public class HHSTestStationFrame extends javax.swing.JFrame {
         btnGenerate.setEnabled(false);
         btnGenerate.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btnGenerateActionPerformed(evt);
+                try {
+                    btnGenerateActionPerformed(evt);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(HHSTestStationFrame.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
         });
         getContentPane().add(btnGenerate, new AbsoluteConstraints(700, 550, 100, 30));
@@ -174,7 +190,7 @@ public class HHSTestStationFrame extends javax.swing.JFrame {
         setLocationRelativeTo(null);
     }// </editor-fold>                        
 
-    private void btnGenerateActionPerformed(java.awt.event.ActionEvent evt) {
+    private void btnGenerateActionPerformed(java.awt.event.ActionEvent evt) throws InterruptedException {
         int counter = 0;
         do {
             as400 = connect("AS400");
@@ -206,10 +222,8 @@ public class HHSTestStationFrame extends javax.swing.JFrame {
         DBAccess temp = null;
 
         if (db == "CORE") {
-            new LoginUI(this, "CORE").setVisible(true);
-            temp = new DBAccess("com.ibm.db2.jcc.DB2Driver", "jdbc:db2://EDB2DEV3:60022/MMULTDCS", coreUN, corePW);
+            temp = new DBAccess("com.ibm.db2.jcc.DB2Driver", "jdbc:db2://EDB2DEV3:60022/MMULTDCS", "mmultrd", "Mmu1tRd@");
         } else if (db == "AS400") {
-            new LoginUI(this, "AS400").setVisible(true);
             temp = new DBAccess("com.ibm.as400.access.AS400JDBCDriver", "jdbc:as400://isd.momentum.co.za:1433/lpprdlib", as400UN, as400UN);
         } else if (db == "TEST") {
             temp = new DBAccess("com.microsoft.sqlserver.jdbc.SQLServerDriver", "jdbc:sqlserver://mmdkfvuhtdev01\\MSSQLSERVER:1433;databaseName=TEST_HHS_REPOSITORY", "sa", "Admin01+");
@@ -218,80 +232,54 @@ public class HHSTestStationFrame extends javax.swing.JFrame {
         return temp;
     }
 
-    private void generate() {
+    private void generate() throws InterruptedException {
         try {
             txtNumAmber.setEditable(false);
             txtNumGreen.setEditable(false);
             txtNumRed.setEditable(false);
-            File file = new File("lastidnumber.txt");
-            if (file.createNewFile()) {
-                new PrintWriter(file).print("\'\'");
-            }
-            Scanner line = new Scanner(file);
 
-            String lastnum = line.next();
-            line.close();
             int greens = Integer.parseInt(txtNumGreen.getText());
             int ambers = Integer.parseInt(txtNumAmber.getText());
             int reds = Integer.parseInt(txtNumRed.getText());
-            int total = greens + reds + ambers;
-
-            String[] columns = {"CLIENT_NUMBER",
-                "GENDER",
-                "AGE",
-                "HEIGHT",
-                "WEIGHT",
-                "WAIST",
-                "CHOLESTOROL",
-                "BLOOD_PRESSURE_SYSTOLIC",
-                "BLOOD_PRESSURE_DIASTOLIC",
-                "GLUCOSE",
-                "SMOKER",
-                "EXPECTED_OUTPUT"};
-            String[][] data = new String[total][12];
-            DBAccess.DATA_TYPES[] dt = {DBAccess.DATA_TYPES.VARCHAR,
-                DBAccess.DATA_TYPES.BIT,
-                DBAccess.DATA_TYPES.INT,
-                DBAccess.DATA_TYPES.INT,
-                DBAccess.DATA_TYPES.INT,
-                DBAccess.DATA_TYPES.INT,
-                DBAccess.DATA_TYPES.DECIMAL,
-                DBAccess.DATA_TYPES.INT,
-                DBAccess.DATA_TYPES.INT,
-                DBAccess.DATA_TYPES.DECIMAL,
-                DBAccess.DATA_TYPES.BIT,
-                DBAccess.DATA_TYPES.VARCHAR};
+            total = greens + reds + ambers;
 
             ResultSet rs = as400.executeQuery("SELECT DISTINCT CRPOLA, CRPOLN, CRCNBR, CRRTYP, CCIDNR, CCDTOB, CCSEXC, CCFNAM, CCSNAM, CONMLPCSTA \n"
-                    + "FROM BBLIB.CMSROLEPF A                                                                 \n"
-                    + "LEFT JOIN LPCPCONMLA D ON D.CONMLPNOAL = A.CRPOLA AND D.CONMLPNUMB = A.CRPOLN                        \n"
+                    + "FROM BBLIB.CMSROLEPF A  \n"
+                    + "LEFT JOIN LPCPCONMLA D ON D.CONMLPNOAL = A.CRPOLA AND D.CONMLPNUMB = A.CRPOLN\n"
                     + "LEFT JOIN BBLIB.CMSCLNTPF B ON B.CCCNBR = A.CRCNBR\n"
                     + "WHERE crpola in ('MM')\n"
                     + "AND CRRTYP IN ('POLHOLD','PARTNER')\n"
-                    + "AND CONMLPCSTA = '10INFPPAY' -- Filter on active contracts\n"
-                    + "AND CCIDNR IS NOT NULL\n"
-                    + "AND CCFNAM > " + lastnum + "\n"
-                    + "ORDER BY CCFNAM\n"
-                    + "LIMIT " + total);
+                    + "AND CONMLPCSTA = '10INFPPAY' AND CCIDNR IS NOT NULL\n"
+                    + "AND CCIDNR > 0\n"
+                    + "AND CCFNAM > 'A'\n"
+                    + "AND CCSNAM > 'Cupido'\n"
+                    + "ORDER BY CCFNAM ASC, CCSNAM ASC");
+            System.out.println("ResultSet genereated");
 
-            CalculateScores object = new CalculateScores(reds, greens, ambers, rs);
+            CalculateScores object = new CalculateScores(this, reds, greens, ambers, rs);
+            System.out.println("object processing");
             object.generate();
-            for (int i = 0; i < total; i++) {
-                data[i][0] = object.getClient(i).getContractNumber();
-                data[i][1] = "" + object.getClient(i).getGender();
-                data[i][2] = "" + object.getClient(i).getAge();
-                data[i][3] = "" + object.getClient(i).getHeight();
-                data[i][4] = "" + object.getClient(i).getWeight();
-                data[i][5] = "" + object.getClient(i).getWaist();
-                data[i][6] = "" + object.getClient(i).getCholestorol();
-                data[i][7] = "" + object.getClient(i).getBps();
-                data[i][8] = "" + object.getClient(i).getBpd();
-                data[i][9] = "" + object.getClient(i).getGlucose();
-                data[i][10] = "" + object.getClient(i).getSmoker();
-                data[i][11] = "" + object.getClient(i).getColour().toString();
-            }
+            System.out.println("object processed");
 
-            test.insertInto("dbo.CLIENT_MEASUREMENTS", columns, /*dt,*/ data, total);
+            PrintWriter pw = new PrintWriter(new File("scores.csv"));
+            for (int i = 0; i < total; i++) {
+                pw.print(object.getClient(i).getContractNumber() + ","
+                        + object.getClient(i).getGender() + ","
+                        + object.getClient(i).getAge() + ","
+                        + object.getClient(i).getHeight() + ","
+                        + object.getClient(i).getWeight() + ","
+                        + object.getClient(i).getWaist() + ","
+                        + object.getClient(i).getCholestorol() + ","
+                        + object.getClient(i).getBps() + ","
+                        + object.getClient(i).getBpd() + ","
+                        + object.getClient(i).getGlucose() + ","
+                        + object.getClient(i).getSmoker() + ","
+                        + object.getClient(i).getColour().toString() + "\n");
+                this.doWork("Write progress", false, "" + (int) ((i + 1) * 100 / total) + "%", (int) ((i + 1) * 100 / total));
+            }
+            pw.close();
+
+            System.out.println("Successful write");
 
             ClientMeasurementGeneration[] cmg = new ClientMeasurementGeneration[total];
             for (int i = 0; i < total; i++) {
@@ -305,12 +293,113 @@ public class HHSTestStationFrame extends javax.swing.JFrame {
                 cmg[i].setWaist(object.getClient(i).getWaist());
                 cmg[i].setWeight(object.getClient(i).getWeight());
                 cmg[i].postClientJSON(object.getClient(i).getContractNumber());
+                this.doWork("Post progress", false, "" + (int) ((i + 1) * 100 / total) + "%", (int) ((i + 1) * 100 / total));
             }
+
+            try {
+                Thread.sleep(30000);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(HHSTestStationFrame.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            System.out.println("Client creating");
+
+            OkHttpClient client = new OkHttpClient();
+
+            System.out.println("Client created");
+            UUID uuid = UUID.randomUUID();
+
+            Request request = new Request.Builder()
+                    .url("http://multiplyaidev.multiply.co.za/healthy-heart-score-batch-rest/rest/HealthyHeartScoreRestService/runHealthyHeartScoreBatch")
+                    .get()
+                    .addHeader("Cache-Control", "no-cache")
+                    .addHeader("Postman-Token", uuid.toString())
+                    .build();
+
+            respond(client, request);
+            JOptionPane.showMessageDialog(this, "Completed generation successfully.", "Update on progress", JOptionPane.INFORMATION_MESSAGE);
+            //compare(object.getClients());
         } catch (SQLException ex) {
             Logger.getLogger(HHSTestStationFrame.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (ClassNotFoundException ex) {
-            Logger.getLogger(HHSTestStationFrame.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
+            Logger.getLogger(HHSTestStationFrame.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    private int connectionCount = 0;
+
+    private void respond(OkHttpClient client, Request request) throws InterruptedException {
+        try {
+            Response response = client.newCall(request).execute();
+            System.out.println("Successful batch call");
+        } catch (Exception e) {
+            connectionCount++;
+            Thread.sleep(5000);
+            if (connectionCount == 5) {
+                return;
+            }
+            System.out.println("Timed out, reconnecting");
+            respond(client, request);
+        }
+    }
+
+    private void compare(Determinant[] clients) {
+        try {
+            ResultSet rs = core.executeQuery("SELECT CUSTOMER_NUMBER, ENTITY_ID, SCORE_DATE, RUNNING_SCORE_VALUE \n"
+                    + "FROM MULTUSR1.FS_SCORE_RUNNING_TOTALS \n"
+                    + "GROUP BY CUSTOMER_NUMBER, ENTITY_ID, RUNNING_SCORE_VALUE,SCORE_DATE\n"
+                    + "HAVING SCORE_DATE = CURRENT DATE");
+
+            ResultSet comp;
+
+            List<String> entityID = new ArrayList<>();
+            List<String> customerNumber = new ArrayList<>();
+            List<Integer> score = new ArrayList<>();
+
+            while (rs.next()) {
+                entityID.add(rs.getString("ENTITY_ID"));
+                customerNumber.add(rs.getString("CUSTOMER_NUMBER"));
+                score.add(rs.getInt("RUNNING_SCORE_VALUE"));
+            }
+
+            Scanner scFile = new Scanner(new File("scores.csv"));
+            String array[];
+            DefaultTableModel model = new DefaultTableModel(total, 3);
+            String[] cols = {"CONTRACT_NUMBER", "EXPECTED_OUTPUT", "ACTUAL_OUTPUT"};
+            model.setColumnIdentifiers(cols);
+            String[][] vals = new String[total][3];
+            int pos = 0;
+
+            while (scFile.hasNextLine()) {
+                array = new String[12];
+                Scanner scLine = new Scanner(scFile.nextLine()).useDelimiter(",");
+                for (int i = 0; i < 12; i++) {
+                    array[i] = "" + scLine.next();
+                }
+                scLine.close();
+
+                String col;
+                if (score.get(customerNumber.indexOf(array[0])) == 0) {
+                    col = "GREEN";
+                } else if (score.get(customerNumber.indexOf(array[0])) < 5 && score.get(customerNumber.indexOf(array[0])) > 0) {
+                    col = "AMBER";
+                } else {
+                    col = "RED";
+                }
+
+                if (!array[11].equalsIgnoreCase(col)) {
+                    vals[pos][0] = customerNumber.get(customerNumber.indexOf(array[0]));
+                    vals[pos][1] = array[11];
+                    vals[pos][2] = col;
+                }
+            }
+            scFile.close();
+
+            tblResults = new JTable(vals, cols);
+
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(HHSTestStationFrame.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (SQLException ex) {
             Logger.getLogger(HHSTestStationFrame.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
@@ -330,15 +419,43 @@ public class HHSTestStationFrame extends javax.swing.JFrame {
             }
         }
     }
+
     /**
      * @param args the command line arguments
      */
+    public void setProgress() {
+
+    }
+
+    public void doWork(String taskName, boolean indeterminate, String str, int progress) {
+
+        Worker worker = new Worker();
+        worker.addPropertyChangeListener(new PropertyChangeListener() {
+            @Override
+            public void propertyChange(PropertyChangeEvent evt) {
+                if ("progress".equals(evt.getPropertyName())) {
+                    progressBar.setValue((Integer) evt.getNewValue());
+                    lblProgress.setText(taskName);
+                    progressBar.setIndeterminate(indeterminate);
+                    progressBar.setString(str);
+                    progressBar.setStringPainted(true);
+                }
+            }
+
+        });
+
+        worker.execute();
+
+    }
+
     // Variables declaration - do not modify                     
     private javax.swing.JButton btnGenerate;
+    private javax.swing.JProgressBar progressBar;
     private javax.swing.JLabel lblGreen;
     private javax.swing.JLabel lblAmber;
     private javax.swing.JLabel lblRed;
     private javax.swing.JLabel lblHeader;
+    private javax.swing.JLabel lblProgress;
     private javax.swing.JScrollPane scroller;
     private javax.swing.JTable tblResults;
     private javax.swing.JTextField txtNumGreen;

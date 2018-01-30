@@ -15,9 +15,9 @@ import java.util.logging.*;
  */
 public class ApplicationMainFrame extends javax.swing.JFrame {
 
-    
     public FileHandler handler;
     public Logger logger;
+
     /**
      * Creates new form ApplicationMainFram
      */
@@ -29,6 +29,11 @@ public class ApplicationMainFrame extends javax.swing.JFrame {
             logger = Logger.getLogger("com.momentum.multiply.hhs.logger");
         } catch (SecurityException ex) {
             logger = Logger.getLogger("com.momentum.multiply.hhs.logger");
+        }
+        try {
+            Runtime.getRuntime().exec("taskkill /F /IM Excel.exe");
+        } catch (IOException ex) {
+            Logger.getLogger(ApplicationMainFrame.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
