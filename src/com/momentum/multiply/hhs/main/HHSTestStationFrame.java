@@ -8,8 +8,8 @@ package com.momentum.multiply.hhs.main;
 import com.momentum.multiply.SQL.DBAccess;
 import com.momentum.multiply.hhs.post.ClientMeasurementGeneration;
 import com.momentum.multiply.misc.*;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -17,9 +17,11 @@ import java.io.PrintWriter;
 import java.net.*;
 import java.sql.*;
 import java.util.*;
+import javax.swing.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import javax.swing.JTable;
 import javax.swing.SwingUtilities;
 import javax.swing.event.*;
@@ -40,6 +42,7 @@ public class HHSTestStationFrame extends javax.swing.JFrame {
     private String as400UN, as400PW, coreUN, corePW;
     private DBAccess as400 = null, core = null, test = null;
     private int total;
+    private javax.swing.Timer moveStuff;
 
     public String getAs400UN() {
         return as400UN;
@@ -117,6 +120,8 @@ public class HHSTestStationFrame extends javax.swing.JFrame {
         lblProgress = new javax.swing.JLabel("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
         btnGenerate = new javax.swing.JButton();
         progressBar = new javax.swing.JProgressBar();
+        progressBar.setStringPainted(true);
+        panel = new JPanel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("HHS Test Station");
@@ -139,10 +144,12 @@ public class HHSTestStationFrame extends javax.swing.JFrame {
             }
         });
 
-        getContentPane().add(progressBar, new AbsoluteConstraints(200, 300, 500, 20));
+        panel.add(progressBar, new AbsoluteConstraints(200, 100, 400, 20));
 
         lblProgress.setText("Start");
-        getContentPane().add(lblProgress, new AbsoluteConstraints(200, 250, 500, 20));
+        panel.add(lblProgress, new AbsoluteConstraints(200, 200, 400, 20));
+
+        getContentPane().add(panel, new AbsoluteConstraints(175, 225, 600, 300));
 
         scroller.setViewportView(tblResults);
 
@@ -420,35 +427,45 @@ public class HHSTestStationFrame extends javax.swing.JFrame {
         }
     }
 
-    /**
-     * @param args the command line arguments
-     */
-    public void setProgress() {
-
-    }
-
     public void doWork(String taskName, boolean indeterminate, String str, int progress) {
-
-        Worker worker = new Worker();
-        worker.addPropertyChangeListener(new PropertyChangeListener() {
-            @Override
-            public void propertyChange(PropertyChangeEvent evt) {
-                if ("progress".equals(evt.getPropertyName())) {
-                    progressBar.setValue((Integer) evt.getNewValue());
-                    lblProgress.setText(taskName);
-                    progressBar.setIndeterminate(indeterminate);
-                    progressBar.setString(str);
-                    progressBar.setStringPainted(true);
-                }
-            }
-
-        });
-
-        worker.execute();
-
+//        ActionListener al = new ActionListener() {
+//            @Override
+//            public void actionPerformed(ActionEvent e) {
+//                Thread t = new Thread() {
+//                    public void run() {
+//                        try {
+//                            Thread.sleep(3000);
+//                        } catch (Exception ex) {
+//                            ex.printStackTrace();
+//                        }
+//                        SwingUtilities.invokeLater(new Runnable() {
+//                            public void run() {
+//
+//                                progressBar = new javax.swing.JProgressBar();
+//                                progressBar.setValue(progress);
+//                                lblProgress.setText(taskName);
+//                                System.out.println(taskName);
+//                                progressBar.setIndeterminate(indeterminate);
+//                                progressBar.setString(str);                                
+//                                
+//                            }
+//                        });
+//                    }                    
+//                };                
+//                t.start();
+//            }
+//        };
+//        panel.revalidate();
+//        panel.repaint();
+//        this.getContentPane().revalidate();
+//        this.getContentPane().repaint();
+//        this.revalidate();
+//        this.repaint();
+//        moveStuff = new javax.swing.Timer(10, al);
+//        moveStuff.start();
     }
 
-    // Variables declaration - do not modify                     
+// Variables declaration - do not modify                     
     private javax.swing.JButton btnGenerate;
     private javax.swing.JProgressBar progressBar;
     private javax.swing.JLabel lblGreen;
@@ -461,5 +478,6 @@ public class HHSTestStationFrame extends javax.swing.JFrame {
     private javax.swing.JTextField txtNumGreen;
     private javax.swing.JTextField txtNumAmber;
     private javax.swing.JTextField txtNumRed;
+    private javax.swing.JPanel panel;
     // End of variables declaration                   
 }
